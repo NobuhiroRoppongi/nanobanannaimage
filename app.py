@@ -79,8 +79,8 @@ api_key = st.text_input("Gemini API Key", type="password")
 prompt = st.text_area("Enter Prompt", height=160)
 
 # On cloud, keep this as a *server* folder, not local PC path
-default_dir = str(Path.cwd() / "outputs")
-save_dir = st.text_input("Server Output Folder (for app)", default_dir)
+# default_dir = str(Path.cwd() / "outputs")
+# save_dir = st.text_input("Server Output Folder (for app)", default_dir)
 
 file_base_name = st.text_input(
     "Output File Name (without extension)",
