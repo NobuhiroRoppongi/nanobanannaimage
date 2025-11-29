@@ -5,6 +5,7 @@ import os
 import base64
 import mimetypes
 from pathlib import Path
+import io
 
 import streamlit as st
 from google import genai
@@ -48,7 +49,7 @@ def generate_image(api_key: str, prompt: str, save_dir: str, file_base_name: str
     image_count = 0
 
     for part in content.parts:
-        # 🔹 IMAGE output
+        # IMAGE output
         if getattr(part, "inline_data", None) and part.inline_data.data:
             data_buffer = part.inline_data.data
 
@@ -57,14 +58,13 @@ def generate_image(api_key: str, prompt: str, save_dir: str, file_base_name: str
 
             extension = mimetypes.guess_extension(part.inline_data.mime_type) or ".png"
 
-            # 🔥 Use user-defined file name
             file_name = f"{file_base_name}{'' if image_count == 0 else f'_{image_count}'}{extension}"
             image_count += 1
 
             save_path = save_binary_file(save_dir_path / file_name, data_buffer)
-            saved_files.append(save_path)
+            saved_files.append((save_path, part.inline_data.mime_type))
 
-        # 🔹 TEXT output
+        # TEXT output
         if getattr(part, "text", None):
             text_parts.append(part.text)
 
@@ -78,11 +78,10 @@ st.title("🖼️ Gemini Image Generator")
 api_key = st.text_input("Gemini API Key", type="password")
 prompt = st.text_area("Enter Prompt", height=160)
 
-# Folder path
+# On cloud, keep this as a *server* folder, not local PC path
 default_dir = str(Path.cwd() / "outputs")
-save_dir = st.text_input("Output Folder Path", default_dir)
+save_dir = st.text_input("Server Output Folder (for app)", default_dir)
 
-# 🔥 New: output file name input
 file_base_name = st.text_input(
     "Output File Name (without extension)",
     value="generated_image"
@@ -107,9 +106,21 @@ if st.button("Generate"):
                     st.write(txt)
 
                 if files:
-                    st.subheader("Generated Image Preview")
-                    for f in files:
-                        st.image(str(f), caption=f"Saved → {f.name}")
-                        st.caption(str(f))
+                    st.subheader("Generated Image Preview & Download")
+
+                    for path, mime in files:
+                        st.image(str(path), caption=f"Saved on server → {path.name}")
+                        st.caption(f"Server path: {path}")
+
+                        # 🔽 Download to local machine
+                        with open(path, "rb") as img_f:
+                            data = img_f.read()
+
+                        st.download_button(
+                            label=f"Download {path.name}",
+                            data=data,
+                            file_name=path.name,
+                            mime=mime or "image/png",
+                        )
                 else:
                     st.warning("No image returned from model.")
